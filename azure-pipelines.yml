@@ -7,27 +7,37 @@ trigger:
 - main
 
 pool:
- name: 'TestAgent'
+  name: 'TestAgent'
 
 variables:
-  solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
+  projectPath: 'D:\Playground\shalini3388\azure-pipeline-test'
 
 steps:
+# Copy your local project folder into the build workspace
+- powershell: |
+    Write-Host "Copying source from $(projectPath) to $(Build.SourcesDirectory)"
+    Copy-Item -Path "$(projectPath)\*" -Destination "$(Build.SourcesDirectory)" -Recurse -Force
+  displayName: 'Copy source files to build workspace'
+
+# Install NuGet
 - task: NuGetToolInstaller@1
 
+# Restore packages
 - task: NuGetCommand@2
   inputs:
-    restoreSolution: '$(solution)'
+    restoreSolution: '$(Build.SourcesDirectory)\Test.Gateway.sln'
 
+# Build solution
 - task: VSBuild@1
   inputs:
-    solution: '$(solution)'
+    solution: '$(Build.SourcesDirectory)\Test.Gateway.sln'
     msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
+# Run tests
 - task: VSTest@2
   inputs:
     platform: '$(buildPlatform)'
